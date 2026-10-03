@@ -1,0 +1,9 @@
+gradio>=5.0,<7
+numpy>=1.26,<3
+Pillow>=10.0,<13
+rembg[cpu]>=2.0.67,<3
+ultralytics>=8.3,<9
+# YOLO-World text prompts require Ultralytics CLIP. Use the archive URL so
+# Windows machines without Git can still install it with pip.
+https://github.com/ultralytics/CLIP/archive/refs/heads/main.zip
+

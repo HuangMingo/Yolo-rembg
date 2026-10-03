@@ -1,0 +1,2 @@
+"""Tiger background-removal application."""
+
