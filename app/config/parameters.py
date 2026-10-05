@@ -20,6 +20,11 @@ ALPHA_MATTING = True
 ALPHA_FOREGROUND_THRESHOLD = 240
 ALPHA_BACKGROUND_THRESHOLD = 10
 ALPHA_ERODE_SIZE = 3
+# rembg post-processing hardens the mask; keep off to preserve fine fur.
+POST_PROCESS_MASK = False
+# Remove background color fringing when alpha matting is disabled.
+# Requires a rembg version exposing the decontaminate argument.
+DECONTAMINATE = False
 
 # Giới hạn ảnh đầu vào
 MAX_UPLOAD_MB = 20

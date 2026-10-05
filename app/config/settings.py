@@ -32,6 +32,8 @@ class Settings:
     alpha_foreground_threshold: int = parameters.ALPHA_FOREGROUND_THRESHOLD
     alpha_background_threshold: int = parameters.ALPHA_BACKGROUND_THRESHOLD
     alpha_erode_size: int = parameters.ALPHA_ERODE_SIZE
+    post_process_mask: bool = parameters.POST_PROCESS_MASK
+    decontaminate: bool = parameters.DECONTAMINATE
 
     output_directory: Path = field(
         default_factory=lambda: (
@@ -50,4 +52,8 @@ class Settings:
             raise ValueError("YOLO_IOU must be in [0, 1].")
         if not 0 <= self.bbox_padding <= 1:
             raise ValueError("BBOX_PADDING must be in [0, 1].")
+        if not 0 <= self.alpha_background_threshold < self.alpha_foreground_threshold < 255:
+            raise ValueError("Alpha thresholds must satisfy 0 <= background < foreground < 255.")
+        if self.alpha_erode_size < 0:
+            raise ValueError("ALPHA_ERODE_SIZE must be non-negative.")
 
