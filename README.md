@@ -49,7 +49,7 @@ Với mỗi ảnh, chương trình tự chọn detection có diện tích lớn 
 
 ## Cấu hình
 
-Các tham số nằm trong `app/config/settings.py` và có thể ghi đè bằng biến môi trường:
+Chỉnh các tham số trong `app/config/parameters.py`; `Settings` đọc và kiểm tra các giá trị này khi khởi động. Sau khi chỉnh, cần khởi động lại ứng dụng hoặc phiên notebook để nạp cấu hình mới.
 
 | Biến | Mặc định | Ý nghĩa |
 |---|---:|---|
@@ -58,20 +58,37 @@ Các tham số nằm trong `app/config/settings.py` và có thể ghi đè bằn
 | `YOLO_CONFIDENCE` | `0.10` | Ngưỡng phát hiện; nên hiệu chỉnh sau khi đánh giá từng bộ ảnh |
 | `YOLO_IOU` | `0.45` | Ngưỡng IoU/NMS |
 | `YOLO_DEVICE` | `auto` | `auto`, `cpu`, `0`, ... |
-| `BBOX_PADDING` | `0.10` | Padding 10% quanh bounding box |
+| `BBOX_PADDING` | `0.15` | Padding 15% quanh bounding box |
 | `REMBG_MODEL` | `birefnet-general` | Model tách nền |
 | `ALPHA_MATTING` | `true` | Bật alpha matting |
 | `ALPHA_FOREGROUND_THRESHOLD` | `240` | Ngưỡng foreground |
 | `ALPHA_BACKGROUND_THRESHOLD` | `10` | Ngưỡng background |
-| `ALPHA_ERODE_SIZE` | `10` | Kích thước erode cho trimap |
+| `ALPHA_ERODE_SIZE` | `3` | Kích thước erode cho trimap |
+| `POST_PROCESS_MASK` | `False` | Làm sạch mask bằng rembg; có thể mất lông mảnh |
+| `DECONTAMINATE` | `False` | Làm sạch màu ám ở viền khi tắt alpha matting; cần rembg hỗ trợ |
 | `OUTPUT_DIRECTORY` | tự tìm `BTL/remove_background image/animals` | Thư mục tự động lưu PNG |
 
 Ví dụ đổi thư mục lưu kết quả:
 
-```powershell
-$env:OUTPUT_DIRECTORY="D:\duong-dan\thu-muc-ket-qua"
-python run.py
+```python
+# Trong app/config/parameters.py
+OUTPUT_DIRECTORY = r"D:\duong-dan\thu-muc-ket-qua"
 ```
+
+### Tinh chỉnh viền theo rembg
+
+Ứng dụng dùng API PIL theo [hướng dẫn rembg](https://github.com/danielgatis/rembg/blob/main/USAGE.md): tạo `new_session(REMBG_MODEL)` một lần rồi gọi `remove(image, session=session, ...)` cho mỗi vùng động vật. Kết quả được giữ ở dạng PNG RGBA, không đổi kích thước. Không cần cài thêm thư viện.
+
+Cấu hình mặc định giữ `birefnet-general` và alpha matting để ước lượng độ trong suốt và màu foreground ở viền. `POST_PROCESS_MASK` mặc định tắt: rembg dùng morphology, làm mờ rồi threshold mask; bật có thể làm sạch cảnh sót nhưng cũng mất lông hoặc ria.
+
+- Nếu còn mảng cảnh quanh viền: thử `POST_PROCESS_MASK = True` trên cùng một ảnh và so sánh với `False`.
+- Nếu còn ám màu nền: giữ `ALPHA_MATTING = True` trước. Có thể thử riêng `ALPHA_MATTING = False` cùng `DECONTAMINATE = True`; rembg bỏ qua decontaminate khi alpha matting bật, nên ứng dụng chỉ truyền tùy chọn này khi tắt matting.
+- Nếu matting nhận nhầm lông là foreground chắc chắn: thử tăng `ALPHA_FOREGROUND_THRESHOLD` từ 240 lên 245. Nếu còn nền mờ: thử tăng `ALPHA_BACKGROUND_THRESHOLD` từ 10 lên 20. Đây là giá trị thử nghiệm, cần kiểm tra mất lông trên ảnh thực tế; không phải thiết lập tốt nhất cho mọi ảnh.
+- Giữ `0 <= background < foreground < 255`; ví dụ foreground 270 trong USAGE.md không phù hợp mask 8-bit vì không còn pixel foreground chắc chắn.
+
+Tùy chọn `decontaminate` có trong mã rembg hiện tại nhưng có thể chưa có trong bản bạn cài. Ứng dụng kiểm tra API và báo lỗi rõ ràng nếu bật tùy chọn trên phiên bản không hỗ trợ, thay vì âm thầm bỏ qua. Trong trường hợp đó nâng cấp bằng `python -m pip install --upgrade "rembg[cpu]>=2.0.67,<3"`; nếu bản phát hành vẫn chưa hỗ trợ, dùng alpha matting hoặc tắt `DECONTAMINATE`.
+
+Đánh giá kết quả trên nền trắng, đen và màu nổi ở mức zoom 100%, đặc biệt vùng lông, tai, đuôi và ria. Unit test xác minh API, session, alpha và lỗi; không thay thế đánh giá chất lượng mô hình trên ảnh thật.
 
 ## Kiểm thử
 

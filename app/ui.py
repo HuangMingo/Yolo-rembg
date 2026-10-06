@@ -7,7 +7,12 @@ from pathlib import Path
 import gradio as gr
 
 from app.config import Settings
-from app.services import AnimalDetector, BackgroundRemover, ImageProcessor, ProcessingError
+from app.services import (
+    AnimalDetector,
+    BackgroundRemover,
+    ImageProcessor,
+    ProcessingError,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -21,7 +26,9 @@ APP_CSS = """
 def get_processor(settings: Settings | None = None) -> ImageProcessor:
     """Models are initialized exactly once and reused by every request."""
     settings = settings or Settings()
-    return ImageProcessor(settings, AnimalDetector(settings), BackgroundRemover(settings))
+    return ImageProcessor(
+        settings, AnimalDetector(settings), BackgroundRemover(settings)
+    )
 
 
 def _detect(image_path: str | None, settings: Settings | None = None):
@@ -35,7 +42,11 @@ def _detect(image_path: str | None, settings: Settings | None = None):
         f"{index + 1}. {item.class_name} - {item.confidence:.1%}"
         for index, item in enumerate(result.detections)
     ]
-    return result.preview, gr.Dropdown(choices=choices, value=choices[0], interactive=True), result
+    return (
+        result.preview,
+        gr.Dropdown(choices=choices, value=choices[0], interactive=True),
+        result,
+    )
 
 
 def _remove_background(
@@ -47,10 +58,16 @@ def _remove_background(
         raise gr.Error("Hãy chạy YOLO trước.")
     selected_index = int(selection.split(".", 1)[0]) - 1 if selection else 0
     try:
-        result = get_processor(settings).process_detection(detected, selected_index, save_output=True)
+        result = get_processor(settings).process_detection(
+            detected, selected_index, save_output=True
+        )
     except ProcessingError as exc:
         raise gr.Error(exc.message) from exc
-    return result.preview, result.output, json.dumps(result.metadata, ensure_ascii=False, indent=2), str(result.saved_path)
+    return (
+        result.preview,
+        result.output,
+        json.dumps(result.metadata, ensure_ascii=False, indent=2),
+    )
 
 
 def _process_folder(
@@ -62,10 +79,14 @@ def _process_folder(
         raise gr.Error("Vui lòng chọn một thư mục có ảnh.")
 
     def update_progress(completed: int, total: int, source_name: str) -> None:
-        progress(completed / total, desc=f"Đang xử lý {source_name} ({completed}/{total})")
+        progress(
+            completed / total, desc=f"Đang xử lý {source_name} ({completed}/{total})"
+        )
 
     try:
-        result = get_processor(settings).process_batch(image_paths, progress_callback=update_progress)
+        result = get_processor(settings).process_batch(
+            image_paths, progress_callback=update_progress
+        )
     except ProcessingError as exc:
         raise gr.Error(exc.message) from exc
 
@@ -77,7 +98,9 @@ def _process_folder(
     report = json.dumps(result.as_dict(), ensure_ascii=False, indent=2)
     archive = str(result.archive_path) if result.archive_path else None
     if result.failure_count:
-        gr.Warning(f"Hoàn thành với {result.failure_count} ảnh lỗi. Xem báo cáo để biết chi tiết.")
+        gr.Warning(
+            f"Hoàn thành với {result.failure_count} ảnh lỗi. Xem báo cáo để biết chi tiết."
+        )
     return gallery, report, archive
 
 
@@ -86,7 +109,9 @@ def build_ui(
     settings: Settings | None = None,
 ) -> gr.Blocks:
     if settings is not None and output_directory is not None:
-        raise ValueError("Chỉ truyền settings hoặc output_directory, không truyền đồng thời cả hai.")
+        raise ValueError(
+            "Chỉ truyền settings hoặc output_directory, không truyền đồng thời cả hai."
+        )
     resolved_settings = settings or (
         Settings(output_directory=Path(output_directory))
         if output_directory is not None
@@ -112,16 +137,31 @@ def build_ui(
             with gr.Tab("Một ảnh"):
                 state = gr.State()
                 with gr.Row():
-                    original = gr.Image(type="filepath", label="1. Ảnh gốc", sources=["upload", "clipboard"])
-                    detection_preview = gr.Image(type="pil", label="2. Kết quả YOLO", interactive=False)
-                    output = gr.Image(type="pil", label="3. Ảnh tách nền", image_mode="RGBA", interactive=False)
+                    original = gr.Image(
+                        type="filepath",
+                        label="1. Ảnh gốc",
+                        sources=["upload", "clipboard"],
+                    )
+                    detection_preview = gr.Image(
+                        type="pil", label="2. Kết quả YOLO", interactive=False
+                    )
+                    output = gr.Image(
+                        type="pil",
+                        label="3. Ảnh tách nền",
+                        image_mode="RGBA",
+                        interactive=False,
+                    )
                 with gr.Row():
                     detect_button = gr.Button("Phát hiện động vật", variant="secondary")
-                    object_selector = gr.Dropdown(label="Chọn đối tượng", choices=[], interactive=True)
+                    object_selector = gr.Dropdown(
+                        label="Chọn đối tượng", choices=[], interactive=True
+                    )
                     remove_button = gr.Button("Tách nền", variant="primary")
                     reset_button = gr.Button("Đặt lại")
-                metadata = gr.Code(label="Thông tin xử lý", language="json", interactive=False)
-                download = gr.DownloadButton("Tải PNG", interactive=False)
+                metadata = gr.Code(
+                    label="Thông tin xử lý", language="json", interactive=False
+                )
+                # download = gr.DownloadButton("Tải PNG", interactive=False)
 
                 detect_button.click(
                     detect_from_ui,
@@ -131,11 +171,26 @@ def build_ui(
                 remove_button.click(
                     remove_from_ui,
                     inputs=[state, object_selector],
-                    outputs=[detection_preview, output, metadata, download],
+                    outputs=[detection_preview, output, metadata],
                 )
                 reset_button.click(
-                    lambda: (None, None, None, gr.Dropdown(choices=[], value=None), None, "", None),
-                    outputs=[original, detection_preview, output, object_selector, state, metadata, download],
+                    lambda: (
+                        None,
+                        None,
+                        None,
+                        gr.Dropdown(choices=[], value=None),
+                        None,
+                        "",
+                        None,
+                    ),
+                    outputs=[
+                        original,
+                        detection_preview,
+                        output,
+                        object_selector,
+                        state,
+                        metadata,
+                    ],
                 )
 
             with gr.Tab("Cả thư mục"):
@@ -150,7 +205,9 @@ def build_ui(
                     type="filepath",
                 )
                 with gr.Row():
-                    batch_button = gr.Button("Tách nền toàn bộ thư mục", variant="primary")
+                    batch_button = gr.Button(
+                        "Tách nền toàn bộ thư mục", variant="primary"
+                    )
                     batch_reset_button = gr.Button("Đặt lại")
                 batch_gallery = gr.Gallery(
                     label="Ảnh đã tách nền",
@@ -158,8 +215,12 @@ def build_ui(
                     object_fit="contain",
                     height="auto",
                 )
-                batch_report = gr.Code(label="Báo cáo xử lý", language="json", interactive=False)
-                batch_download = gr.DownloadButton("Tải toàn bộ kết quả (.zip)", interactive=False)
+                batch_report = gr.Code(
+                    label="Báo cáo xử lý", language="json", interactive=False
+                )
+                batch_download = gr.DownloadButton(
+                    "Tải toàn bộ kết quả (.zip)", interactive=False
+                )
 
                 batch_button.click(
                     process_folder_from_ui,
@@ -178,6 +239,9 @@ def launch(
     settings: Settings | None = None,
 ) -> None:
     """Launch the app and optionally override the directory used for PNG output."""
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
-    build_ui(output_directory=output_directory, settings=settings).launch(inbrowser=True, css=APP_CSS)
-
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
+    )
+    build_ui(output_directory=output_directory, settings=settings).launch(
+        inbrowser=True, css=APP_CSS
+    )

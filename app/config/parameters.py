@@ -2,7 +2,7 @@
 
 # Thư mục lưu kết quả. Đặt None để chương trình tự chọn thư mục mặc định.
 OUTPUT_DIRECTORY = (
-    r"D:\Documents\HỆ CƠ SỞ DỮ LIỆU ĐA PHƯƠNG TIỆN\BTL\remove_background image\wolf"
+    r"none"
 )
 
 # YOLO
@@ -17,9 +17,14 @@ BBOX_PADDING = 0.15
 # Tách nền
 REMBG_MODEL = "birefnet-general"
 ALPHA_MATTING = True
-ALPHA_FOREGROUND_THRESHOLD = 240
-ALPHA_BACKGROUND_THRESHOLD = 10
+ALPHA_FOREGROUND_THRESHOLD = 220
+ALPHA_BACKGROUND_THRESHOLD = 20
 ALPHA_ERODE_SIZE = 3
+# rembg post-processing hardens the mask; keep off to preserve fine fur.
+POST_PROCESS_MASK = False
+# Remove background color fringing when alpha matting is disabled.
+# Requires a rembg version exposing the decontaminate argument.
+DECONTAMINATE = False
 
 # Giới hạn ảnh đầu vào
 MAX_UPLOAD_MB = 20
