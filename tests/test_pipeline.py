@@ -87,14 +87,23 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result.output.size, (320, 180))
         self.assertEqual(result.output.mode, "RGBA")
         self.assertFalse(result.metadata["resized"])
+        self.assertEqual(result.metadata["detection_method"], "yolo")
         self.assertEqual(result.metadata["class_name"], "tiger")
         self.assertEqual(result.metadata["bbox"], [40, 10, 280, 175])
 
-    def test_no_detection_stops_pipeline(self):
+    def test_no_detection_falls_back_to_full_image(self):
         processor = ImageProcessor(self.settings, FakeDetector([]), FakeRemover())
-        with self.assertRaises(ProcessingError) as context:
-            processor.detect(image_bytes())
-        self.assertEqual(context.exception.code, "NO_OBJECT_DETECTED")
+        detected = processor.detect(image_bytes())
+
+        self.assertEqual(detected.detection_method, "full_image_fallback")
+        self.assertEqual(len(detected.detections), 1)
+        self.assertEqual(detected.detections[0].confidence, 0.0)
+        self.assertEqual(detected.detections[0].bbox, (0.0, 0.0, 320.0, 180.0))
+
+        result = processor.process_detection(detected)
+        self.assertEqual(result.metadata["detection_method"], "full_image_fallback")
+        self.assertEqual(result.metadata["crop_size"], [320, 180])
+        self.assertEqual(result.output.size, (320, 180))
 
     def test_save_keeps_source_stem_and_uses_png(self):
         detections = [Detection("tiger", 0.91, (40, 10, 280, 175))]
@@ -139,6 +148,25 @@ class PipelineTests(unittest.TestCase):
                     set(archive.namelist()),
                     {"animal.png", "animal_2.png", "report.json"},
                 )
+
+    def test_batch_uses_full_image_when_yolo_finds_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "animal.jpg"
+            source.write_bytes(image_bytes())
+            settings = replace(self.settings, output_directory=root / "output")
+            processor = ImageProcessor(settings, FakeDetector([]), FakeRemover())
+
+            result = processor.process_batch([source])
+
+            self.assertEqual(result.success_count, 1)
+            self.assertEqual(result.failure_count, 0)
+            self.assertEqual(
+                result.items[0].metadata["detection_method"],
+                "full_image_fallback",
+            )
+            self.assertEqual(result.items[0].metadata["crop_size"], [320, 180])
+            self.assertTrue(result.archive_path.is_file())
 
     def test_batch_continues_after_invalid_image(self):
         detections = [Detection("tiger", 0.91, (40, 10, 280, 175))]

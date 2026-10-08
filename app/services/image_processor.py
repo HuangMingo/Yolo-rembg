@@ -36,6 +36,7 @@ class DetectionResult:
     preview: Image.Image
     detections: list[Detection]
     source_stem: str
+    detection_method: str = "yolo"
 
 
 @dataclass(slots=True)
@@ -114,13 +115,32 @@ class ImageProcessor:
             detections = self.detector.detect(image)
         except (RuntimeError, ValueError, OSError) as exc:
             raise ProcessingError("DETECTION_FAILED", str(exc)) from exc
+        detection_method = "yolo"
         if not detections:
-            raise ProcessingError(
-                "NO_OBJECT_DETECTED",
-                "Không phát hiện được động vật được hỗ trợ. Hãy thử ảnh rõ toàn thân hoặc giảm confidence.",
+            # The input contract guarantees one animal per image. If YOLO's
+            # confidence is too low, let BiRefNet segment the complete frame
+            # instead of dropping an otherwise valid image.
+            width, height = image.size
+            detections = [
+                Detection(
+                    class_name="animal",
+                    confidence=0.0,
+                    bbox=(0.0, 0.0, float(width), float(height)),
+                )
+            ]
+            detection_method = "full_image_fallback"
+            LOGGER.warning(
+                "[DETECT] no YOLO detection; using full image bbox=%s",
+                detections[0].bbox,
             )
         source_stem = Path(source).stem if isinstance(source, (str, Path)) else "animal_result"
-        return DetectionResult(image, draw_detections(image, detections), detections, source_stem)
+        return DetectionResult(
+            image,
+            draw_detections(image, detections),
+            detections,
+            source_stem,
+            detection_method,
+        )
 
     def process_detection(
         self,
@@ -151,6 +171,7 @@ class ImageProcessor:
         preview = draw_detections(detected.image, detected.detections, selected_index)
         metadata = {
             "success": True,
+            "detection_method": detected.detection_method,
             "class_name": detection.class_name,
             "confidence": round(detection.confidence, 4),
             "bbox": [round(value, 2) for value in detection.bbox],

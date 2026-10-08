@@ -38,10 +38,13 @@ def _detect(image_path: str | None, settings: Settings | None = None):
         result = get_processor(settings).detect(image_path)
     except ProcessingError as exc:
         raise gr.Error(exc.message) from exc
-    choices = [
-        f"{index + 1}. {item.class_name} - {item.confidence:.1%}"
-        for index, item in enumerate(result.detections)
-    ]
+    if result.detection_method == "full_image_fallback":
+        choices = ["1. Toàn bộ ảnh - YOLO không phát hiện"]
+    else:
+        choices = [
+            f"{index + 1}. {item.class_name} - {item.confidence:.1%}"
+            for index, item in enumerate(result.detections)
+        ]
     return (
         result.preview,
         gr.Dropdown(choices=choices, value=choices[0], interactive=True),

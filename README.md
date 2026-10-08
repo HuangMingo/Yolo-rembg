@@ -45,7 +45,7 @@ Trình duyệt sẽ mở giao diện tại địa chỉ Gradio hiển thị tron
 4. Xem thư viện kết quả và báo cáo từng ảnh.
 5. Nhấn **Tải toàn bộ kết quả (.zip)** để tải các PNG cùng `report.json`.
 
-Với mỗi ảnh, chương trình tự chọn detection có diện tích lớn nhất. Nếu một ảnh hỏng hoặc không phát hiện được động vật, ảnh đó được ghi vào báo cáo và các ảnh còn lại vẫn tiếp tục xử lý. Mỗi lần chạy batch được lưu trong một thư mục riêng để không ghi đè kết quả cũ.
+Với mỗi ảnh, chương trình tự chọn detection có diện tích lớn nhất. Nếu YOLO không phát hiện, chương trình dùng toàn bộ ảnh làm vùng dự phòng cho BiRefNet; báo cáo ghi `detection_method` là `full_image_fallback`. Nếu một ảnh hỏng hoặc tách nền thất bại, ảnh đó được ghi vào báo cáo và các ảnh còn lại vẫn tiếp tục xử lý. Mỗi lần chạy batch được lưu trong một thư mục riêng để không ghi đè kết quả cũ.
 
 ## Cấu hình
 
@@ -96,7 +96,7 @@ Tùy chọn `decontaminate` có trong mã rembg hiện tại nhưng có thể ch
 python -m unittest discover -v
 ```
 
-Các test lõi không tải model: kiểm tra ảnh thật/ảnh hỏng, bbox có padding, giữ tỉ lệ và alpha, luồng thành công, và dừng đúng khi không phát hiện động vật.
+Các test lõi không tải model: kiểm tra ảnh thật/ảnh hỏng, bbox có padding, giữ tỉ lệ và alpha, luồng thành công, và fallback toàn ảnh khi YOLO không phát hiện động vật.
 
 ## Cấu trúc
 

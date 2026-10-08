@@ -221,7 +221,7 @@ Kiểm tra các hành vi cốt lõi:
 - Giữ tỷ lệ ảnh và kênh alpha.
 - Căn giữa ảnh mà không thay đổi kích thước.
 - Chọn đối tượng lớn nhất theo mặc định.
-- Dừng đúng khi không phát hiện động vật.
+- Dùng toàn bộ ảnh làm fallback cho BiRefNet khi YOLO không phát hiện động vật.
 - Lưu PNG đúng tên và đúng chế độ RGBA.
 
 Chạy test bằng:
